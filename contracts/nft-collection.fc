@@ -62,31 +62,44 @@ slice calculate_nft_item_address(int wc, cell state_init) {
   send_raw_message(msg.end_cell(), 64); ;; carry all the remaining value of the inbound message
 }
 
-() recv_internal(cell in_msg_full, slice in_msg_body) impure {
+(builder) convertIntToStr (builder string, int n) {
+  tuple chars = null();
+  do {
+      int r = n~divmod(10);
+      chars = cons(r + 48, chars);
+  } until (n == 0);
+  do {
+      int char = chars~list_next();
+      string~store_uint(char, 8);
+  } until (null?(chars));
+  return (string);
+}
+
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
     slice sender_address = cs~load_msg_addr();
     var (owner_address, next_item_index, content, nft_item_code, royalty_params) = load_data();
     
-    ;;if (op == op::get_royalty_params()) {
-    ;;    send_royalty_params(sender_address, query_id, royalty_params.begin_parse());
-    ;;    return ();
-    ;;}
+   
 
-    ;;we dont need to have an owner here
-    ;;throw_unless(401, equal_slices(sender_address, owner_address));
+    int a = msg_value / 1000000000;
+    int b = msg_value / 10000000;
+    
+
+
     cell body_dict = new_dict();
 
-    body_dict~udict_set_builder(256, "image"H, begin_cell()); ;; todo put here some image link
-    body_dict~udict_set_builder(256, "name"H, begin_cell()); ;; todo put here some name + TON NUMBER
-    body_dict~udict_set_builder(256, "description"H, begin_cell()); ;; todo put here some description + TON NUMBER + LINK TO GIT REPO
+    body_dict~udict_set_ref(256, "image"H, begin_cell().store_uint(0, 8).store_slice("https://shorturl.at/ELRZ1").end_cell()); ;; todo put here some image link
+    body_dict~udict_set_ref(256, "name"H, begin_cell().store_uint(0, 8).store_slice("I just burned ").convertIntToStr(a).store_slice(".").convertIntToStr((b - (a * 100))).store_slice(" TONs!").end_cell()); ;; todo put here some name + TON NUMBER
+    body_dict~udict_set_ref(256, "description"H, begin_cell().store_uint(0, 8).store_slice("I think that was a bad decision").end_cell()); ;; todo put here some description + TON NUMBER + LINK TO GIT REPO
 
-    deploy_nft_item(next_item_index + 1, nft_item_code, 100000, ;; todo think about 100000 
+    deploy_nft_item(next_item_index + 1, nft_item_code, 50000000, ;; todo think about 100000 
       begin_cell()
       .store_slice(sender_address)
       .store_dict(body_dict)
       .end_cell()); 
-
     
     next_item_index += 1;
     save_data(owner_address, next_item_index, content, nft_item_code, royalty_params);
@@ -97,8 +110,8 @@ slice calculate_nft_item_address(int wc, cell state_init) {
 
 (int, cell, slice) get_collection_data() method_id {
   var (owner_address, next_item_index, content, _, _) = load_data();
-  slice cs = content.begin_parse();
-  return (next_item_index, cs~load_ref(), owner_address);
+  cell cs = content;
+  return (next_item_index, cs, owner_address);
 }
 
 slice get_nft_address_by_index(int index) method_id {
@@ -116,12 +129,12 @@ slice get_nft_address_by_index(int index) method_id {
 cell get_nft_content(int index, cell individual_nft_content) method_id {
   var (_, _, content, _, _) = load_data();
   slice cs = content.begin_parse();
-  cs~load_ref();
-  slice common_content = cs~load_ref().begin_parse();
+  ;;cs~load_ref();
+  ;;slice common_content = cs~load_ref().begin_parse();
   return (begin_cell()
-                      .store_uint(1, 8) ;; offchain tag
-                      .store_slice(common_content)
-                      .store_ref(individual_nft_content)
+                      .store_uint(0, 8) ;; onchain tag
+                      .store_dict(individual_nft_content)
           .end_cell());
 }
+
 

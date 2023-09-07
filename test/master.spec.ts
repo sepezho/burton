@@ -3,6 +3,7 @@ import { SmartContract } from "ton-contract-executor";
 import { expect } from "chai";
 import {
   logs,
+  initMaster,
   internalMessage,
   randomAddress,
 } from "./utils";
@@ -18,7 +19,7 @@ describe("evaa master sc tests", () => {
   beforeEach(async () => {
     contract = await SmartContract.fromCell(
       masterCodeCell,
-      beginCell().endCell(),
+      initMaster(),
       {
         debug: true,
       }
@@ -27,7 +28,7 @@ describe("evaa master sc tests", () => {
     masterContractAddress = contractAddress({
       workchain: 0,
       initialCode: masterCodeCell,
-      initialData: beginCell().endCell(),
+      initialData: initMaster(),
     });
 
     const tx = await contract.sendInternalMessage(
@@ -49,6 +50,7 @@ describe("evaa master sc tests", () => {
         body: beginCell().endCell(),
       }) as any
     );
+    console.log(tx);
     logs(tx);
     expect(tx.type).equals('success');
   });
