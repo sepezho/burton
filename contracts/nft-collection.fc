@@ -3,9 +3,13 @@
 #include "imports/op-codes.fc";
 #include "imports/params.fc";
 
+const AMOUNT_TO_DEPLOY_NFT = 50000000; ;; 0.05 TON  ;; todo think about 100000
+const FEE_CONS = 30000000; ;; 0.03 TON
+
+
 (slice, int, cell, cell, cell) load_data() inline {
   var ds = get_data().begin_parse();
-  return 
+  return
     (ds~load_msg_addr(), ;; owner_address
      ds~load_uint(64), ;; next_item_index
      ds~load_ref(), ;; content
@@ -77,17 +81,16 @@ slice calculate_nft_item_address(int wc, cell state_init) {
 
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
     slice sender_address = cs~load_msg_addr();
     var (owner_address, next_item_index, content, nft_item_code, royalty_params) = load_data();
-    
-   
+
+   throw_if(10, msg_value < FEE_CONS + AMOUNT_TO_DEPLOY_NFT);
 
     int a = msg_value / 1000000000;
     int b = msg_value / 10000000;
-    
-
 
     cell body_dict = new_dict();
 
@@ -95,14 +98,30 @@ slice calculate_nft_item_address(int wc, cell state_init) {
     body_dict~udict_set_ref(256, "name"H, begin_cell().store_uint(0, 8).store_slice("I just burned ").convertIntToStr(a).store_slice(".").convertIntToStr((b - (a * 100))).store_slice(" TONs!").end_cell()); ;; todo put here some name + TON NUMBER
     body_dict~udict_set_ref(256, "description"H, begin_cell().store_uint(0, 8).store_slice("I think that was a bad decision").end_cell()); ;; todo put here some description + TON NUMBER + LINK TO GIT REPO
 
-    deploy_nft_item(next_item_index + 1, nft_item_code, 50000000, ;; todo think about 100000 
+    deploy_nft_item(next_item_index + 1, nft_item_code, AMOUNT_TO_DEPLOY_NFT,
       begin_cell()
       .store_slice(sender_address)
       .store_dict(body_dict)
-      .end_cell()); 
-    
+      .end_cell());
+
     next_item_index += 1;
+
     save_data(owner_address, next_item_index, content, nft_item_code, royalty_params);
+
+    slice param = config_param(5).begin_parse();
+    param~skip_bits(8 + 1);
+    slice blackhole_addr = param~load_bits(256);
+
+    var msg = begin_cell()
+              .store_uint(0x10, 6) ;; non bounceable
+              .store_uint(4, 3)  ;; 100 prefix + (maybe anycast)
+              .store_int(-1, 8) ;; masterchain
+              .store_slice(blackhole_addr)
+              .store_coins(msg_value - AMOUNT_TO_DEPLOY_NFT - FEE_CONS)
+              .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1);
+
+    send_raw_message(msg.end_cell(), 0);
+
     return ();
 }
 
