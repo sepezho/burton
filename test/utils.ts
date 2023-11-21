@@ -108,9 +108,9 @@ export const initMaster = () => {
   const metadataDict = new DictBuilder(256);
 
 
-  metadataDict.storeCell(sha256_sync('name'), encodeOffChainContent('burton'))
-  metadataDict.storeCell(sha256_sync('description'), encodeOffChainContent('i just burned some tons'))
-  metadataDict.storeCell(sha256_sync('image'), encodeOffChainContent('https://shorturl.at/ELRZ1'))
+  metadataDict.storeCell(sha256_sync('name'), encodeOffChainContent('TON burner'))
+  metadataDict.storeCell(sha256_sync('description'), encodeOffChainContent('I just burned some TONs!'))
+  metadataDict.storeCell(sha256_sync('image'), encodeOffChainContent("ipfs://QmZNKUuHWBACoEikPjmz12njg3btdm6uuFMetpx6jeYr8R"))
 
   return beginCell()
     .storeAddress(null)
